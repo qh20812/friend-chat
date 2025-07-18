@@ -1,0 +1,167 @@
+// ===== POSTS & CONTENT MODULE =====
+
+model Post {
+  id          String      @id @default(cuid())
+  authorId    String
+  content     String?     @db.Text
+  visibility  Visibility  @default(FRIENDS)
+  type        PostType    @default(TEXT)
+  isScheduled Boolean     @default(false)
+  scheduledAt DateTime?
+  location    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  author      User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Content
+  media       PostMedia[]
+  mentions    PostMention[]
+  hashtags    PostHashtag[]
+  
+  // Interactions
+  comments    Comment[]
+  reactions   Reaction[]
+  shares      Share[]
+  
+  // Group/Page posts
+  groupId     String?
+  pageId      String?
+  group       Group?      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  page        Page?       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([visibility])
+  @@index([type])
+  @@index([groupId])
+  @@index([pageId])
+  @@map("posts")
+}
+
+model PostMedia {
+  id              String         @id @default(cuid())
+  postId          String
+  type            MediaType
+  url             String
+  fileName        String?
+  fileSize        Int?
+  mimeType        String?
+  storageProvider StorageProvider @default(LOCAL)
+  order           Int            @default(0)
+  
+  post            Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@index([postId])
+  @@map("post_media")
+}
+
+model PostMention {
+  id        String @id @default(cuid())
+  postId    String
+  userId    String
+  
+  post      Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([postId, userId])
+  @@map("post_mentions")
+}
+
+model PostHashtag {
+  id        String  @id @default(cuid())
+  postId    String
+  hashtagId String
+  
+  post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+  
+  @@unique([postId, hashtagId])
+  @@map("post_hashtags")
+}
+
+model Hashtag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  count     Int           @default(0)
+  createdAt DateTime      @default(now())
+  
+  posts     PostHashtag[]
+  
+  @@map("hashtags")
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String    @db.Text
+  parentId  String?   // For nested comments
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  
+  // Nested comments
+  replies   Comment[] @relation("CommentReplies")
+  reactions Reaction[]
+  
+  @@index([postId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model Reaction {
+  id        String      @id @default(cuid())
+  userId    String
+  postId    String?
+  commentId String?
+  type      ReactionType
+  createdAt DateTime    @default(now())
+  
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment?    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, postId, commentId])
+  @@index([userId])
+  @@index([postId])
+  @@index([type])
+  @@map("reactions")
+}
+
+model Share {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  content   String?  @db.Text
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, postId])
+  @@map("shares")
+}
+
+// Enums for this module
+enum PostType {
+  TEXT
+  IMAGE
+  VIDEO
+  LINK
+  POLL
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}

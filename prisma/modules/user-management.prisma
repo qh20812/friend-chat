@@ -1,0 +1,96 @@
+// ===== USER MANAGEMENT MODULE =====
+
+model User {
+  id                String    @id @default(cuid())
+  username          String    @unique
+  email             String    @unique
+  phoneNumber       String?   @unique
+  password          String
+  firstName         String
+  lastName          String
+  displayName       String?
+  bio               String?
+  avatar            String?
+  coverImage        String?
+  dateOfBirth       DateTime?
+  gender            Gender?
+  location          String?
+  website           String?
+  isVerified        Boolean   @default(false)
+  isOnline          Boolean   @default(false)
+  lastSeen          DateTime?
+  emailVerified     Boolean   @default(false)
+  phoneVerified     Boolean   @default(false)
+  twoFactorEnabled  Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relationships will be defined in main schema
+  
+  @@index([email])
+  @@index([username])
+  @@index([isOnline])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model PrivacySettings {
+  id                    String      @id @default(cuid())
+  userId                String      @unique
+  profileVisibility     Visibility  @default(FRIENDS)
+  postVisibility        Visibility  @default(FRIENDS)
+  friendListVisibility  Visibility  @default(FRIENDS)
+  contactInfoVisibility Visibility  @default(FRIENDS)
+  searchVisibility      Boolean     @default(true)
+  
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("privacy_settings")
+}
+
+model NotificationSettings {
+  id                    String  @id @default(cuid())
+  userId                String  @unique
+  emailNotifications    Boolean @default(true)
+  pushNotifications     Boolean @default(true)
+  messageNotifications  Boolean @default(true)
+  friendRequestNotifications Boolean @default(true)
+  postNotifications     Boolean @default(true)
+  commentNotifications  Boolean @default(true)
+  reactionNotifications Boolean @default(true)
+  groupNotifications    Boolean @default(true)
+  
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notification_settings")
+}
+
+model LoginSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  device    String?
+  ip        String?
+  location  String?
+  userAgent String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("login_sessions")
+}
+
+// Enums for this module
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Visibility {
+  PUBLIC
+  FRIENDS
+  PRIVATE
+}

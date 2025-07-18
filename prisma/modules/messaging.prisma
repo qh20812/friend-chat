@@ -1,0 +1,152 @@
+// ===== MESSAGING MODULE =====
+
+model Conversation {
+  id           String    @id @default(cuid())
+  name         String?
+  description  String?
+  type         ConversationType @default(DIRECT)
+  avatar       String?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  members      ConversationMember[]
+  messages     Message[]
+  typingIndicators TypingIndicator[]
+  
+  @@index([type])
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  role           MemberRole   @default(MEMBER)
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime?
+  isActive       Boolean      @default(true)
+  isMuted        Boolean      @default(false)
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([conversationId, userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String?       @db.Text
+  type           MessageType   @default(TEXT)
+  replyToId      String?
+  isEdited       Boolean       @default(false)
+  isPinned       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User          @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo        Message?      @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: Cascade)
+  
+  replies        Message[]     @relation("MessageReplies")
+  media          MessageMedia[]
+  readReceipts   MessageReadReceipt[]
+  
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([type])
+  @@map("messages")
+}
+
+model MessageMedia {
+  id              String         @id @default(cuid())
+  messageId       String
+  type            MediaType
+  url             String
+  fileName        String?
+  fileSize        Int?
+  mimeType        String?
+  duration        Int?           // For audio/video
+  storageProvider StorageProvider @default(LOCAL)
+  
+  message         Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  @@index([messageId])
+  @@map("message_media")
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+  
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([messageId, userId])
+  @@map("message_read_receipts")
+}
+
+model TypingIndicator {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  isTyping       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime     // Auto-expire after a few seconds
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([expiresAt])
+  @@map("typing_indicators")
+}
+
+// Enums for this module
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  VOICE
+  STICKER
+  EMOJI
+  SYSTEM
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  VOICE
+}
+
+enum StorageProvider {
+  LOCAL
+  AWS_S3
+  CLOUDINARY
+  AZURE_BLOB
+  GOOGLE_CLOUD
+}
