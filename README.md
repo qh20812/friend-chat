@@ -45,10 +45,11 @@ friend-chat/
    npm install
    ```
 2. **Cấu hình database**
-   - Sửa file `.env` với thông tin MySQL:
+   - Tạo file `.env` và thêm biến môi trường kết nối MySQL:
      ```env
-     DATABASE_URL="mysql://root:newpassword@localhost:3306/friendchat"
+     DATABASE_URL="mysql://<username>:<password>@<host>:<port>/<database>"
      ```
+   - Thay `<username>`, `<password>`, `<host>`, `<port>`, `<database>` bằng thông tin của bạn.
 3. **Khởi tạo database & Prisma Client**
    ```bash
    npx prisma db push
